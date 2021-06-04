@@ -2,6 +2,7 @@
 
 package commandline
 
+import commandline.CommandlineArgumentParser.Companion.getCmdOptions
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 
@@ -20,13 +21,16 @@ interface CommandlineArgumentParser<T : CmdOptions> {
      * Always uses the last occurrence of the options
      * @param separatorsAndLeftOutMap is evaluated *left to right*
      */
-    private fun getSingleOption(
+    fun getSingleOption(
         name: Regex,
         separatorsAndLeftOutMap: Map<Char, Boolean> = possibleArgumentSeparatorAndLeftOutMap
     ): String? {
-        val findOptionInAllSeparators: String? = null
+        var findOptionInAllSeparators: String? = null
         for ((separator, canBeLeftOut) in separatorsAndLeftOutMap) {
-            singleOptionHelper(name, separator, canBeLeftOut, separatorsAndLeftOutMap.keys)
+            if (findOptionInAllSeparators != null) {
+                break
+            }
+            findOptionInAllSeparators = singleOptionHelper(name, separator, canBeLeftOut, separatorsAndLeftOutMap.keys)
         }
         return findOptionInAllSeparators
     }
@@ -49,19 +53,35 @@ interface CommandlineArgumentParser<T : CmdOptions> {
         } else {
             //Has to be handled separately, because then it is not in one array entry
             val foundArgumentIdentifier = args.findLast { it.matches(Regex("$optionIdentifier($actualOptionPart)?")) }
-            if (foundArgumentIdentifier?.matches(regex) == true) {
-                foundArgumentIdentifier.split(Regex(optionIdentifier)).getOrNull(1)?.lowercase()
-            } else {
-                args.getOrNull(args.lastIndexOf(foundArgumentIdentifier) + 1)?.lowercase()
+            when {
+                foundArgumentIdentifier == null -> {
+                    null
+                }
+                foundArgumentIdentifier.matches(regex) -> {
+                    foundArgumentIdentifier.split(Regex(optionIdentifier)).getOrNull(1)?.lowercase()
+                }
+                else -> {
+                    args.getOrNull(args.lastIndexOf(foundArgumentIdentifier) + 1)?.lowercase()
+                }
             }
         }
     }
 
-    fun Option(
-        first: String,
-        second: (String?, CmdOptions) -> Unit
-    ): Pair<Regex, (String?, CmdOptions) -> Unit> {
-        return Regex(first) to second
+    companion object {
+        fun <T : CmdOptions> Option(
+            regexString: String,
+            optionModificationFunction: (String?, T) -> Unit
+        ): Pair<Regex, (String?, T) -> Unit> {
+            return Regex(regexString) to optionModificationFunction
+        }
+
+        inline fun <reified T : CmdOptions> CommandlineArgumentParser<T>.getCmdOptions(): T {
+            return getCmdOptionsInternal(T::class)
+        }
+
+        inline fun <reified T : CmdOptions> CommandlineArgumentParser<T>.parse(): T {
+            return getCmdOptionsInternal(T::class)
+        }
     }
 
     fun getCmdOptionsInternal(kClass: KClass<T>): T {
@@ -77,19 +97,6 @@ interface CommandlineArgumentParser<T : CmdOptions> {
         return options
     }
 
+
 }
 
-inline fun <reified T : CmdOptions> CommandlineArgumentParser<T>.getCmdOptions(): T {
-    return getCmdOptionsInternal(T::class)
-}
-
-class NoZeroArgumentConstructorException(constructors: Collection<KFunction<Any>>? = null) :
-    Exception(
-        if (constructors != null)
-            """
-                Couldn't find a matching constructor that can be called with Zero arguments, all constructors are: $constructors
-            """.trimIndent()
-        else
-            "Couldn't find a matching constructor that can be called with Zero arguments"
-    ) {
-}
