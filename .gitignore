@@ -1,2 +1,7 @@
 # Other stuff
 build/
+/.gradle/buildOutputCleanup/**
+/.gradle/7.0/executionHistory/executionHistory.bin
+/.gradle/7.0/executionHistory/executionHistory.lock
+/.gradle/7.0/fileHashes/fileHashes.bin
+/.gradle/7.0/fileHashes/fileHashes.lock
