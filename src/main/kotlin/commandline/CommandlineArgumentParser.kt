@@ -2,9 +2,7 @@
 
 package commandline
 
-import commandline.CommandlineArgumentParser.Companion.getCmdOptions
 import kotlin.reflect.KClass
-import kotlin.reflect.KFunction
 
 interface CommandlineArgumentParser<T : CmdOptions> {
     val args: Array<String>
@@ -80,7 +78,7 @@ interface CommandlineArgumentParser<T : CmdOptions> {
         }
 
         inline fun <reified T : CmdOptions> CommandlineArgumentParser<T>.parse(): T {
-            return getCmdOptionsInternal(T::class)
+            return getCmdOptions()
         }
     }
 
